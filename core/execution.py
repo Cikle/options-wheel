@@ -5,7 +5,7 @@ import numpy as np
 
 logger = logging.getLogger(f"strategy.{__name__}")
 
-def sell_puts(client, allowed_symbols, buying_power, strat_logger = None):
+def sell_puts(client, allowed_symbols, buying_power, strat_logger=None, discord_notifier=None, trades_summary=None):
     """
     Scan allowed symbols and sell short puts up to the buying power limit.
     """
@@ -14,7 +14,8 @@ def sell_puts(client, allowed_symbols, buying_power, strat_logger = None):
 
     logger.info("Searching for put options...")
     filtered_symbols = filter_underlying(client, allowed_symbols, buying_power)
-    strat_logger.set_filtered_symbols(filtered_symbols)
+    if strat_logger:
+        strat_logger.set_filtered_symbols(filtered_symbols)
     if len(filtered_symbols) == 0:
         logger.info("No symbols found with sufficient buying power.")
         return
@@ -34,18 +35,37 @@ def sell_puts(client, allowed_symbols, buying_power, strat_logger = None):
                 break
             logger.info(f"Selling put: {p.symbol}")
             client.market_sell(p.symbol)
+            
+            # Discord notification
+            if discord_notifier:
+                discord_notifier.send_trade_notification(
+                    trade_type="PUT",
+                    symbol=p.underlying,
+                    contract_symbol=p.symbol,
+                    strike=p.strike,
+                    premium=p.bid_price,
+                    expiry=f"{p.dte} days"
+                )
+            
+            # Update trades summary
+            if trades_summary:
+                trades_summary["puts_sold"] += 1
+                trades_summary["total_premium"] += p.bid_price or 0
+            
             if strat_logger:
                 strat_logger.log_sold_puts([p.to_dict()])
     else:
         logger.info("No put options found with sufficient delta and open interest.")
 
-def sell_calls(client, symbol, purchase_price, stock_qty, strat_logger = None):
+def sell_calls(client, symbol, purchase_price, stock_qty, strat_logger=None, discord_notifier=None):
     """
     Select and sell covered calls.
     """
     if stock_qty < 100:
         msg = f"Not enough shares of {symbol} to cover short calls!  Only {stock_qty} shares are held and at least 100 are needed!"
         logger.error(msg)
+        if discord_notifier:
+            discord_notifier.send_error_notification(msg, f"Insufficient shares for {symbol}")
         raise ValueError(msg)
 
     logger.info(f"Searching for call options on {symbol}...")
@@ -58,6 +78,18 @@ def sell_calls(client, symbol, purchase_price, stock_qty, strat_logger = None):
         contract = call_options[np.argmax(scores)]
         logger.info(f"Selling call option: {contract.symbol}")
         client.market_sell(contract.symbol)
+        
+        # Discord notification
+        if discord_notifier:
+            discord_notifier.send_trade_notification(
+                trade_type="CALL",
+                symbol=contract.underlying,
+                contract_symbol=contract.symbol,
+                strike=contract.strike,
+                premium=contract.bid_price,
+                expiry=f"{contract.dte} days"
+            )
+        
         if strat_logger:
             strat_logger.log_sold_calls(contract.to_dict())
     else:
