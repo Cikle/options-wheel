@@ -4,10 +4,12 @@ from core.execution import sell_puts, sell_calls
 from core.state_manager import update_state, calculate_risk
 from config.credentials import ALPACA_API_KEY, ALPACA_SECRET_KEY, IS_PAPER
 from config.params import MAX_RISK
-from logging.strategy_logger import StrategyLogger
-from logging.logger_setup import setup_logger
-from logging.discord_notifier import DiscordNotifier
+from logs.strategy_logger import StrategyLogger
+from logs.logger_setup import setup_logger
+from logs.discord_notifier import DiscordNotifier
 from core.cli_args import parse_args
+from core.market_hours import MarketHoursChecker, log_market_status
+from core.continuous_scheduler import ContinuousScheduler
 
 def test_discord_webhook():
     """Test Discord webhook functionality"""
@@ -62,18 +64,44 @@ def test_discord_webhook():
         print(f"❌ Error sending Discord messages: {e}")
         return False
 
-def main():
-    args = parse_args()
+def test_market_hours():
+    """Test market hours functionality"""
+    print("Testing market hours checker...")
+    print("="*50)
     
-    # If testing Discord, run test and exit
-    if args.test_discord:
-        test_discord_webhook()
-        return
+    log_market_status()
     
+    checker = MarketHoursChecker()
+    status = checker.get_market_status()
+    
+    print("\nDetailed Market Status:")
+    for key, value in status.items():
+        print(f"  {key}: {value}")
+    
+    print("\n✅ Market hours test completed!")
+
+def execute_strategy_once(args):
+    """Execute the strategy once (extracted for use by scheduler)"""
     # Initialize loggers and notifier
-    strat_logger = StrategyLogger(enabled=args.strat_log)  # custom JSON logger used to persist strategy-specific state (e.g. trades, symbols, PnL).
-    logger = setup_logger(level=args.log_level, to_file=args.log_to_file) # standard Python logger used for general runtime messages, debugging, and error reporting.
-    discord_notifier = DiscordNotifier()  # Discord webhook notifier
+    strat_logger = StrategyLogger(enabled=args.strat_log)
+    logger = setup_logger(level=args.log_level, to_file=args.log_to_file)
+    discord_notifier = DiscordNotifier()
+
+    # Check if options trading is allowed
+    market_checker = MarketHoursChecker()
+    if not market_checker.can_trade_options():
+        status = market_checker.get_market_status()
+        message = f"⏰ Options trading not allowed at this time\n"
+        message += f"Market Phase: {status['market_phase']}\n"
+        message += f"Next Market Open: {status['next_market_open']}"
+        
+        logger.warning("Options trading not allowed at this time")
+        log_market_status()
+        
+        if discord_notifier.enabled:
+            discord_notifier.send_message(message, title="⏰ Market Closed", color=0xf39c12)
+        
+        return False  # Indicate that strategy was not executed
 
     strat_logger.set_fresh_start(args.fresh_start)
 
@@ -138,11 +166,48 @@ def main():
         discord_notifier.send_completion_message(trades_summary)
 
         strat_logger.save()
+        return True  # Indicate successful execution
 
     except Exception as e:
         logger.error(f"Error during strategy execution: {e}")
         discord_notifier.send_error_notification(str(e), "Strategy execution")
         raise
+
+def main():
+    args = parse_args()
+    
+    # If testing Discord, run test and exit
+    if args.test_discord:
+        test_discord_webhook()
+        return
+    
+    # If testing market hours, run test and exit
+    if args.test_market_hours:
+        test_market_hours()
+        return
+    
+    # If continuous mode, start the scheduler
+    if args.continuous:
+        logger = setup_logger(level=args.log_level, to_file=args.log_to_file)
+        logger.info("Starting Options Wheel Bot in continuous 24/7 mode...")
+        
+        # Create and start the continuous scheduler
+        scheduler = ContinuousScheduler(
+            strategy_function=lambda: execute_strategy_once(args),
+            check_interval_minutes=args.check_interval,
+            max_runs_per_day=args.max_runs_per_day,
+            discord_notifier=DiscordNotifier()
+        )
+        
+        try:
+            scheduler.start()
+        except KeyboardInterrupt:
+            logger.info("Received interrupt signal. Shutting down...")
+            scheduler.stop()
+        return
+    
+    # Default: Execute strategy once
+    execute_strategy_once(args)
 
 if __name__ == "__main__":
     main()

@@ -192,7 +192,7 @@ To disable Discord notifications, set `DISCORD_NOTIFICATIONS_ENABLED=false` in y
 
 Running the script once will only turn the wheel a single time. To keep it running as a long-term income strategy, you'll want to automate it to run several times per day. This can be done with a cron job on Mac or Linux.
 
-### Setting Up a Cron Job (Mac / Linux)
+### Setting Up a Cron Job (Mac / Linux) - Alternative Method
 
 1. **Find the full path to the `run-strategy` command** by running:
 
@@ -221,6 +221,83 @@ Running the script once will only turn the wheel a single time. To keep it runni
    ```
 
    Replace `/full/path/to/run-strategy` with the output from the `which run-strategy` command above. Also replace `/path/to/logs/` with the directory where you'd like to store log files (create it if needed).
+
+---
+
+## 🤖 24/7 Automation Mode
+
+The bot now supports **continuous 24/7 operation** with built-in market hours awareness! Instead of relying on cron jobs, you can run the bot continuously and it will automatically:
+
+- ✅ **Monitor market hours** and only execute during trading hours
+- ✅ **Skip weekends and holidays** automatically  
+- ✅ **Send Discord notifications** for all activities
+- ✅ **Handle errors gracefully** and continue running
+- ✅ **Respect daily execution limits** to prevent over-trading
+
+### Quick Start - Continuous Mode
+
+```bash
+# Start the bot in 24/7 continuous mode
+run-strategy --continuous
+
+# With custom settings (check every 30 minutes, max 2 executions per day)
+run-strategy --continuous --check-interval 30 --max-runs-per-day 2
+```
+
+### New Command Line Options
+
+- `--continuous` — Enable 24/7 continuous mode with market hours awareness
+- `--check-interval N` — Check market status every N minutes (default: 15)
+- `--max-runs-per-day N` — Maximum strategy executions per trading day (default: 4)
+- `--test-market-hours` — Test market hours checker and exit
+
+### How It Works
+
+1. **Continuous Monitoring**: Checks market status every 15 minutes (configurable)
+2. **Smart Execution**: Only executes trades during regular market hours (9:30 AM - 4:00 PM ET)
+3. **Daily Limits**: Prevents over-trading with configurable daily execution limits
+4. **Market Hours Validation**: Automatically handles weekends, holidays, and pre/after-market hours
+5. **Discord Integration**: Sends notifications for all scheduler events
+
+### Example Usage
+
+```bash
+# Conservative: Check hourly, execute once per day
+run-strategy --continuous --check-interval 60 --max-runs-per-day 1
+
+# Active: Check every 15 minutes, execute up to 4 times per day  
+run-strategy --continuous --check-interval 15 --max-runs-per-day 4
+
+# With full logging for monitoring
+run-strategy --continuous --strat-log --log-to-file --log-level INFO
+```
+
+### Market Hours Information
+
+- **Regular Trading**: 9:30 AM - 4:00 PM ET, Monday-Friday
+- **Options Trading**: Only available during regular market hours
+- **Holiday Aware**: Automatically recognizes US market holidays
+- **Timezone Safe**: Handles Eastern Time conversions and daylight saving
+
+### Benefits Over Cron Jobs
+
+- **No missed executions** due to market closures
+- **Real-time market hours validation**
+- **Built-in error recovery and retry logic**
+- **Comprehensive Discord notifications**
+- **No complex cron scheduling needed**
+
+📖 **For detailed setup instructions, see [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md)**
+
+---
+
+## Manual Automation (Alternative)
+
+If you prefer traditional cron job scheduling instead of continuous mode:
+
+1. **Follow the cron job setup instructions above.**
+2. **Remove any existing cron jobs** for `run-strategy` to avoid conflicts with continuous mode.
+3. **Monitor your email or Discord** for notifications about strategy execution and errors.
 
 ---
 

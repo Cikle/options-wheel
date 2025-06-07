@@ -155,3 +155,33 @@ class DiscordNotifier:
         message += f"\n*Next execution scheduled per cron job settings*"
         
         self.send_message(message, title="✅ Execution Complete", color=0x27ae60)  # Green
+
+    def send_scheduler_notification(self, event_type, message):
+        """
+        Send notification about scheduler events.
+        
+        Args:
+            event_type (str): Type of event ('startup', 'execution_start', 'execution_complete', 'shutdown')
+            message (str): The message to send
+        """
+        if not self.enabled:
+            return
+            
+        color_map = {
+            'startup': 0x00ff00,      # Green
+            'execution_start': 0xf39c12,  # Orange
+            'execution_complete': 0x27ae60,  # Green
+            'shutdown': 0x95a5a6      # Gray
+        }
+        
+        title_map = {
+            'startup': '🤖 Scheduler Started',
+            'execution_start': '🚀 Execution Starting',
+            'execution_complete': '✅ Execution Complete',
+            'shutdown': '🛑 Scheduler Shutdown'
+        }
+        
+        color = color_map.get(event_type, 0x3498db)  # Default blue
+        title = title_map.get(event_type, '📢 Scheduler Update')
+        
+        self.send_message(message, title=title, color=color)
