@@ -49,9 +49,29 @@ This code helps pick the right puts and calls to sell, tracks your positions, an
    ALPACA_API_KEY=your_public_key
    ALPACA_SECRET_KEY=your_private_key
    IS_PAPER=true  # Set to false if using a live account
+   
+   # Discord Webhook (Optional)
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url
+   DISCORD_NOTIFICATIONS_ENABLED=true  # Set to false to disable Discord notifications
    ```
 
-   Your credentials will be loaded from `.env` automatically.
+   Your credentials will be loaded from `.env` automatically.   **Discord Webhook Setup (Optional):**
+   
+   To receive Discord notifications when the bot executes trades:
+   
+   1. Create a Discord server or use an existing one
+   2. Go to Server Settings → Integrations → Webhooks
+   3. Click "New Webhook" and configure it
+   4. Copy the webhook URL and add it to your `.env` file
+   5. Set `DISCORD_NOTIFICATIONS_ENABLED=true`
+   
+   For detailed setup instructions, see [DISCORD_SETUP.md](./DISCORD_SETUP.md).
+   
+   The bot will send notifications for:
+   - Strategy startup and completion
+   - Trade executions (puts and calls sold)
+   - Current positions updates
+   - Error notifications
 
 5. **Choose your symbols:**
 
@@ -79,13 +99,13 @@ This code helps pick the right puts and calls to sell, tracks your positions, an
    
    * **Runtime logging** (`--log-level` and `--log-to-file`):
      Controls console/file logs for monitoring the current run. Optional and configurable.
-   
-   **Flags:**
+     **Flags:**
    
    * `--fresh-start` — Liquidate all positions before running (recommended first run).
    * `--strat-log` — Enable strategy JSON logging (always saved to disk).
    * `--log-level LEVEL` — Set runtime logging verbosity (default: INFO).
    * `--log-to-file` — Save runtime logs to file instead of console.
+   * `--test-discord` — Test Discord webhook functionality and exit (useful for setup verification).
    
    Example:
    
@@ -93,11 +113,60 @@ This code helps pick the right puts and calls to sell, tracks your positions, an
    run-strategy --fresh-start --strat-log --log-level DEBUG --log-to-file
    ```
    
-   For more info:
+   **Testing Discord Integration:**
+   
+   To test if your Discord webhook is working correctly:
+   
+   ```bash
+   run-strategy --test-discord
+   ```
+   
+   This will send test messages to your Discord channel without executing any trades.
+     For more info:
    
    ```bash
    run-strategy --help
    ```
+
+---
+
+## Discord Notifications
+
+The bot can send real-time notifications to Discord when it executes trades or encounters issues. This is especially useful for monitoring your automated trading strategy.
+
+### Notification Types
+
+The Discord integration sends notifications for:
+
+- **🚀 Bot Startup**: When the strategy begins execution
+- **📈📉 Trade Executions**: When puts or calls are sold with details about the contract
+- **📊 Position Updates**: Current portfolio positions and P&L
+- **✅ Completion**: When strategy execution finishes with summary
+- **❌ Errors**: When errors occur during execution
+
+### Setup Instructions
+
+1. **Create a Discord Webhook:**
+   - Go to your Discord server
+   - Navigate to Server Settings → Integrations → Webhooks
+   - Click "New Webhook"
+   - Configure the webhook (name, channel, avatar)
+   - Copy the webhook URL
+
+2. **Configure Your .env File:**
+   ```env
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url_here
+   DISCORD_NOTIFICATIONS_ENABLED=true
+   ```
+
+3. **Test the Integration:**
+   ```bash
+   run-strategy --test-discord
+   ```
+
+### Disabling Notifications
+
+To disable Discord notifications, set `DISCORD_NOTIFICATIONS_ENABLED=false` in your `.env` file or simply omit the Discord configuration variables.
 
 ---
 

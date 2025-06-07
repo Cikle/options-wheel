@@ -27,5 +27,11 @@ def parse_args():
         action="store_true",
         help="Write logs to file instead of just printing to stdout"
     )
+
+    parser.add_argument(
+        "--test-discord",
+        action="store_true",
+        help="Test Discord webhook functionality and exit"
+    )
     
     return parser.parse_args()
