@@ -10,7 +10,7 @@ from typing import Callable, Optional
 from pathlib import Path
 
 from core.market_hours import MarketHoursChecker
-from logs.discord_notifier import DiscordNotifier
+from logging.discord_notifier import DiscordNotifier
 
 logger = logging.getLogger(__name__)
 
