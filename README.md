@@ -420,7 +420,7 @@ Securities brokerage services are provided by Alpaca Securities LLC ("Alpaca Sec
 This is not an offer, solicitation of an offer, or advice to buy or sell securities or open a brokerage account in any jurisdiction where Alpaca Securities is not registered or licensed, as applicable.
 </div>
 
-'''bash
+```bash
 pip install -e .
 python -m scripts.quick_start
-'''
+```
