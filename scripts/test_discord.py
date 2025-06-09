@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from logs.discord_notifier import DiscordNotifier
+from logging.discord_notifier import DiscordNotifier
 
 def test_discord_webhook():
     """Test Discord webhook functionality"""
@@ -47,14 +47,21 @@ def test_discord_webhook():
             premium=5.50,
             expiry="14 days"
         )
-        
-        # Test completion message
+          # Test completion message
         print("📤 Sending test completion message...")
         notifier.send_completion_message({
             "puts_sold": 3,
             "calls_sold": 1,
             "total_premium": 850.00
         })
+        
+        # Test insufficient funds notification
+        print("📤 Sending test insufficient funds notification...")
+        notifier.send_insufficient_funds_notification(
+            symbol="AAPL",
+            required_amount=20000.00,
+            available_amount=15000.00
+        )
         
         print("✅ All test messages sent successfully!")
         print("📱 Check your Discord channel to see if the messages appeared.")

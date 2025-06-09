@@ -14,7 +14,7 @@ def test_imports():
     
     try:
         from core.market_hours import MarketHoursChecker
-        from logs.discord_notifier import DiscordNotifier
+        from logging.discord_notifier import DiscordNotifier
         from core.continuous_scheduler import ContinuousScheduler
         from core.cli_args import parse_args
         print("  ✅ All core modules imported successfully")
@@ -80,7 +80,7 @@ def test_discord():
     print("\n📱 Testing Discord integration...")
     
     try:
-        from logs.discord_notifier import DiscordNotifier
+        from logging.discord_notifier import DiscordNotifier
         
         notifier = DiscordNotifier()
         
@@ -206,10 +206,9 @@ def main():
         print()
         print("📚 For detailed usage instructions:")
         print("   See AUTOMATION_GUIDE.md")
-        
-        # Send success notification to Discord if available
+          # Send success notification to Discord if available
         try:
-            from logs.discord_notifier import DiscordNotifier
+            from logging.discord_notifier import DiscordNotifier
             notifier = DiscordNotifier()
             if notifier.enabled:
                 notifier.send_message(

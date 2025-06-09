@@ -8,7 +8,7 @@ import time
 import logging
 from datetime import datetime
 from core.market_hours import MarketHoursChecker, log_market_status
-from logs.discord_notifier import DiscordNotifier
+from logging.discord_notifier import DiscordNotifier
 
 def demo_strategy_function():
     """Mock strategy function that simulates execution without real trades."""

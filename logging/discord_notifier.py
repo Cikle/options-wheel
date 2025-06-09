@@ -13,7 +13,7 @@ class DiscordNotifier:
         
         if self.enabled and not self.webhook_url:
             logger.warning("Discord notifications are enabled but no webhook URL is configured. Disabling Discord notifications.")
-            self.enabled = False
+            self.enabled = False 
 
     def send_message(self, message, title=None, color=None):
         """
@@ -185,3 +185,26 @@ class DiscordNotifier:
         title = title_map.get(event_type, '📢 Scheduler Update')
         
         self.send_message(message, title=title, color=color)
+
+    def send_insufficient_funds_notification(self, symbol, required_amount, available_amount):
+        """
+        Send notification when there are insufficient funds for a trade.
+        
+        Args:
+            symbol (str): The symbol that was skipped
+            required_amount (float): The amount of buying power required
+            available_amount (float): The amount of buying power available
+        """
+        if not self.enabled:
+            return
+            
+        shortfall = required_amount - available_amount
+        
+        message = f"**🟠 Insufficient Funds - Continuing**\n\n"
+        message += f"**Symbol:** {symbol}\n"
+        message += f"**Required:** ${required_amount:,.2f}\n"
+        message += f"**Available:** ${available_amount:,.2f}\n"
+        message += f"**Shortfall:** ${shortfall:,.2f}\n\n"
+        message += f"*Skipping {symbol} and continuing to check other symbols...*"
+        
+        self.send_message(message, title="⚠️ Insufficient Buying Power", color=0xf39c12)  # Orange
