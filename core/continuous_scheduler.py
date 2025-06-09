@@ -43,25 +43,20 @@ class ContinuousScheduler:
         self.max_runs_per_day = max_runs_per_day
         self.market_checker = MarketHoursChecker()
         self.discord_notifier = discord_notifier
-        
-        # State tracking
+          # State tracking
         self.is_running = False
         self.last_run_date = None
         self.runs_today = 0
         self.last_market_status = None
+        self.shutdown_notified = False  # Track if shutdown notification was sent
         
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-        
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}. Shutting down gracefully...")
-        if self.discord_notifier:
-            self.discord_notifier.send_scheduler_notification(
-                "shutdown", 
-                "🛑 Options Wheel Bot shutting down gracefully"
-            )
+        # Don't send notification here - let stop() handle it to prevent duplicates
         self.stop()
         sys.exit(0)
     
@@ -103,8 +98,7 @@ class ContinuousScheduler:
         # This can be expanded with more sophisticated scheduling logic
         if self.runs_today == 0 and self.market_checker.is_market_open():
             return True, "First run of the trading day"
-        
-        return False, "No execution trigger met"
+            return False, "No execution trigger met"
     
     def _execute_strategy(self):
         """Execute the strategy function with error handling."""
@@ -134,11 +128,9 @@ class ContinuousScheduler:
         except Exception as e:
             logger.error(f"Error during strategy execution: {e}")
             
-            if self.discord_notifier:
-                self.discord_notifier.send_error_notification(
-                    str(e), 
-                    "Continuous Scheduler - Strategy Execution"
-                )
+            # Don't send duplicate error notification here since the main strategy
+            # execution already sends its own error notification via execute_strategy_once()
+            # Just log the error and continue with scheduler operation
     
     def _log_status_update(self):
         """Log periodic status updates."""

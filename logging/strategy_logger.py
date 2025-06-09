@@ -44,8 +44,13 @@ class StrategyLogger:
             "fresh_start": False,
             "buying_power": 0,
             "allowed_symbols": [],
+            "filtered_symbols": [],
             "current_positions": [],
             "state_dict": {},
+            "put_options": [],
+            "call_options": [],
+            "sold_puts": [],
+            "sold_calls": [],
             "trades": [],
             "summary": {
                 "puts_sold": 0,
@@ -70,7 +75,13 @@ class StrategyLogger:
         """Set the list of allowed trading symbols."""
         if self.enabled:
             self.data["allowed_symbols"] = symbols
-    
+
+    def set_filtered_symbols(self, symbols: List[str]):
+        """Set the list of filtered symbols after buying power filter."""
+        if self.enabled:
+            self.data["filtered_symbols"] = symbols
+            logger.info(f"📝 Logged {len(symbols)} filtered symbols: {symbols}")
+
     def add_current_positions(self, positions: List[Any]):
         """Add current position information."""
         if not self.enabled:
@@ -94,6 +105,30 @@ class StrategyLogger:
         """Add the strategy state dictionary."""
         if self.enabled:
             self.data["state_dict"] = state_dict
+
+    def log_put_options(self, put_options: List[Dict[str, Any]]):
+        """Log the available put options."""
+        if self.enabled:
+            self.data["put_options"] = put_options
+            logger.info(f"📝 Logged {len(put_options)} put options")
+
+    def log_call_options(self, call_options: List[Dict[str, Any]]):
+        """Log the available call options."""
+        if self.enabled:
+            self.data["call_options"] = call_options
+            logger.info(f"📝 Logged {len(call_options)} call options")
+
+    def log_sold_puts(self, sold_puts: List[Dict[str, Any]]):
+        """Log the sold put options."""
+        if self.enabled:
+            self.data["sold_puts"].extend(sold_puts)
+            logger.info(f"📝 Logged {len(sold_puts)} sold puts")
+
+    def log_sold_calls(self, sold_call: Dict[str, Any]):
+        """Log a sold call option."""
+        if self.enabled:
+            self.data["sold_calls"].append(sold_call)
+            logger.info(f"📝 Logged sold call: {sold_call.get('symbol', 'Unknown')}")
     
     def log_trade(self, trade_type: str, symbol: str, contract_symbol: str, 
                   strike: float, premium: float, expiry: str, quantity: int = 1):
