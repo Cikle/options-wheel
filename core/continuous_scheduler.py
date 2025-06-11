@@ -41,13 +41,13 @@ class ContinuousScheduler:
         self.max_runs_per_day = max_runs_per_day
         self.market_checker = MarketHoursChecker()
         self.discord_notifier = discord_notifier
-        
-        # State tracking
+          # State tracking
         self.is_running = False
         self.last_run_date = None
         self.runs_today = 0
         self.last_market_status = None
         self.shutdown_notified = False  # Track if shutdown notification was sent
+        self.last_execution_hour = None  # Track last execution hour to prevent duplicates
         
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -55,8 +55,7 @@ class ContinuousScheduler:
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}. Shutting down gracefully...")
-        # Don't send notification here - let stop() handle it to prevent duplicates
-        self.stop()
+        # Don't send notification here - let stop() handle it to prevent duplicates        self.stop()
         sys.exit(0)
     
     def _reset_daily_counter(self):
@@ -66,6 +65,7 @@ class ContinuousScheduler:
         if self.last_run_date != current_date:
             self.runs_today = 0
             self.last_run_date = current_date
+            self.last_execution_hour = None  # Reset execution hour tracking
             logger.info(f"New trading day detected: {current_date}. Reset run counter.")
     
     def _should_execute_strategy(self) -> tuple[bool, str]:
@@ -86,18 +86,50 @@ class ContinuousScheduler:
         # If we want to run at market open, check if market just opened
         if self.run_at_market_open:
             current_status = self.market_checker.get_market_status()
-            
-            # If market just opened (status changed from closed to open)
-            if (self.last_market_status and 
-                not self.last_market_status.get('is_market_open', False) and 
-                current_status['is_market_open']):
-                return True, "Market just opened"
+                  # If market just opened (status changed from closed to open)
+        if (self.last_market_status and 
+            not self.last_market_status.get('is_market_open', False) and 
+            current_status['is_market_open']):
+            return True, "Market just opened"
         
-        # For now, we'll execute once when market opens
-        # This can be expanded with more sophisticated scheduling logic
-        if self.runs_today == 0 and self.market_checker.is_market_open():
-            return True, "First run of the trading day"
-            return False, "No execution trigger met"
+        # Check if we can still execute more times today
+        if self.runs_today >= self.max_runs_per_day:
+            return False, f"Daily execution limit reached ({self.runs_today}/{self.max_runs_per_day})"
+        
+        # Execute if market is open and we haven't hit the daily limit
+        if self.market_checker.is_market_open():
+            # For the first run of the day
+            if self.runs_today == 0:
+                return True, "First run of the trading day"
+            
+            # For subsequent runs, execute every few hours during market hours
+            # Market is typically open 9:30 AM - 4:00 PM ET (6.5 hours)
+            # With max 4 runs, execute roughly every 1.5-2 hours
+            current_time = datetime.datetime.now()
+            
+            # Execute at specific times during market hours for more predictable scheduling
+            execution_hours = []
+            
+            if self.max_runs_per_day == 1:
+                execution_hours = [10]  # 10 AM only
+            elif self.max_runs_per_day == 2:
+                execution_hours = [10, 14]  # 10 AM, 2 PM
+            elif self.max_runs_per_day == 3:
+                execution_hours = [10, 12, 15]  # 10 AM, 12 PM, 3 PM
+            elif self.max_runs_per_day >= 4:
+                execution_hours = [10, 12, 14, 15]  # 10 AM, 12 PM, 2 PM, 3 PM
+              # Check if current hour matches one of our execution hours
+            current_hour = current_time.hour
+            if current_hour in execution_hours:
+                # Prevent multiple executions in the same hour
+                if self.last_execution_hour == current_hour:
+                    return False, f"Already executed this hour ({current_hour}:xx)"
+                
+                # Only execute once per hour (check if minutes are within reasonable range)
+                if current_time.minute < 30:  # Execute in first half of the hour
+                    return True, f"Scheduled execution time (Hour: {current_hour})"
+        
+        return False, "No execution trigger met"
     
     def _execute_strategy(self):
         """Execute the strategy function with error handling."""
@@ -109,12 +141,12 @@ class ContinuousScheduler:
                     "execution_start",
                     f"🚀 Starting strategy execution (Run {self.runs_today + 1}/{self.max_runs_per_day})"
                 )
-            
-            # Execute the strategy
+              # Execute the strategy
             self.strategy_function()
             
-            # Update counters
+            # Update counters and tracking
             self.runs_today += 1
+            self.last_execution_hour = datetime.datetime.now().hour
             
             logger.info(f"Strategy execution completed successfully. Runs today: {self.runs_today}")
             
