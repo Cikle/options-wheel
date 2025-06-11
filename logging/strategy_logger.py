@@ -14,16 +14,18 @@ class StrategyLogger:
     Logs strategy execution details to JSON files for analysis.
     """
     
-    def __init__(self, enabled=True):
+    def __init__(self, enabled=True, session_id=None):
         """
         Initialize the strategy logger.
         
         Args:
             enabled (bool): Whether to enable logging
+            session_id (str): Optional session ID for consistent file naming across executions
         """
         self.enabled = enabled
         self.data = {}
         self.log_file = None
+        self.session_id = session_id
         
         if self.enabled:
             self._initialize_log()
@@ -34,9 +36,12 @@ class StrategyLogger:
         logs_dir = Path("logs")
         logs_dir.mkdir(exist_ok=True)
         
-        # Create log file with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file = logs_dir / f"strategy_log_{timestamp}.json"
+        # Use session_id if provided, otherwise create new timestamp
+        if self.session_id:
+            self.log_file = logs_dir / f"strategy_session_{self.session_id}.json"
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.log_file = logs_dir / f"strategy_log_{timestamp}.json"
         
         # Initialize data structure
         self.data = {

@@ -93,8 +93,7 @@ class DiscordNotifier:
             contract_symbol (str): Full option contract symbol
             strike (float): Strike price
             premium (float): Premium collected
-            expiry (str): Expiration date
-        """
+            expiry (str): Expiration date        """
         if not self.enabled:
             return
             
@@ -119,9 +118,27 @@ class DiscordNotifier:
         message = "**📊 Current Positions Update**\n\n"
         
         for pos in positions_summary:
-            pnl_emoji = "📈" if pos.get('pnl', 0) >= 0 else "📉"
-            message += f"{pnl_emoji} **{pos['symbol']}**: {pos['side']} {pos['qty']} @ ${pos['purchase_price']:.2f}\n"
-            message += f"   Current: ${pos['current_price']:.2f} | P&L: ${pos['pnl']:.2f}\n\n"
+            # Safely convert pnl to float for comparison
+            try:
+                pnl_value = float(pos.get('pnl', 0))
+            except (ValueError, TypeError):
+                pnl_value = 0.0
+                
+            pnl_emoji = "📈" if pnl_value >= 0 else "📉"
+            
+            # Safely convert other values to float for formatting
+            try:
+                purchase_price = float(pos.get('purchase_price', 0))
+            except (ValueError, TypeError):
+                purchase_price = 0.0
+                
+            try:
+                current_price = float(pos.get('current_price', 0))
+            except (ValueError, TypeError):
+                current_price = 0.0
+            
+            message += f"{pnl_emoji} **{pos['symbol']}**: {pos['side']} {pos['qty']} @ ${purchase_price:.2f}\n"
+            message += f"   Current: ${current_price:.2f} | P&L: ${pnl_value:.2f}\n\n"
             
         self.send_message(message, color=0x9b59b6)  # Purple
 

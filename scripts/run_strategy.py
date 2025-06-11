@@ -80,11 +80,11 @@ def test_market_hours():
     
     print("\n✅ Market hours test completed!")
 
-def execute_strategy_once(args):
+def execute_strategy_once(args, session_id=None):
     """Execute the strategy once (extracted for use by scheduler)"""
-    # Initialize loggers and notifier
-    strat_logger = StrategyLogger(enabled=args.strat_log)
-    logger = setup_logger(level=args.log_level, to_file=args.log_to_file)
+    # Initialize loggers and notifier with session_id for consistent file naming
+    strat_logger = StrategyLogger(enabled=args.strat_log, session_id=session_id)
+    logger = setup_logger(level=args.log_level, to_file=args.log_to_file, session_id=session_id)
     discord_notifier = DiscordNotifier()
 
     # Check if options trading is allowed
@@ -120,18 +120,16 @@ def execute_strategy_once(args):
             buying_power = MAX_RISK
         else:
             positions = client.get_positions()
-            strat_logger.add_current_positions(positions)
-
-            # Send position update to Discord
+            strat_logger.add_current_positions(positions)            # Send position update to Discord
             if positions:
                 positions_summary = [
                     {
                         "symbol": pos.symbol,
                         "side": pos.side.title().lower(),
                         "qty": pos.qty,
-                        "purchase_price": pos.avg_entry_price,
-                        "current_price": pos.current_price,
-                        "pnl": pos.unrealized_pl
+                        "purchase_price": float(pos.avg_entry_price) if pos.avg_entry_price else 0.0,
+                        "current_price": float(pos.current_price) if pos.current_price else 0.0,
+                        "pnl": float(pos.unrealized_pl) if pos.unrealized_pl else 0.0
                     }
                     for pos in positions
                 ]
@@ -185,15 +183,18 @@ def main():
     if args.test_market_hours:
         test_market_hours()
         return
-    
-    # If continuous mode, start the scheduler
+      # If continuous mode, start the scheduler
     if args.continuous:
-        logger = setup_logger(level=args.log_level, to_file=args.log_to_file)
+        # Generate session ID for consistent logging across executions
+        import datetime
+        session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        logger = setup_logger(level=args.log_level, to_file=args.log_to_file, session_id=session_id)
         logger.info("Starting Options Wheel Bot in continuous 24/7 mode...")
         
         # Create and start the continuous scheduler
         scheduler = ContinuousScheduler(
-            strategy_function=lambda: execute_strategy_once(args),
+            strategy_function=lambda: execute_strategy_once(args, session_id=session_id),
             check_interval_minutes=args.check_interval,
             max_runs_per_day=args.max_runs_per_day,
             discord_notifier=DiscordNotifier()

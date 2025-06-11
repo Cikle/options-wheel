@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-def setup_logger(level="INFO", to_file=False, name="strategy"):
+def setup_logger(level="INFO", to_file=False, name="strategy", session_id=None):
     """
     Set up a logger with the specified configuration.
     
@@ -14,6 +14,7 @@ def setup_logger(level="INFO", to_file=False, name="strategy"):
         level (str): Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         to_file (bool): Whether to log to file instead of console
         name (str): Logger name
+        session_id (str): Optional session ID for consistent file naming across executions
     
     Returns:
         logging.Logger: Configured logger instance
@@ -35,9 +36,12 @@ def setup_logger(level="INFO", to_file=False, name="strategy"):
         logs_dir = Path("logs")
         logs_dir.mkdir(exist_ok=True)
         
-        # Create log file with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = logs_dir / f"strategy_{timestamp}.log"
+        # Use session_id if provided, otherwise create new timestamp
+        if session_id:
+            log_file = logs_dir / f"strategy_session_{session_id}.log"
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_file = logs_dir / f"strategy_{timestamp}.log"
         
         # File handler
         file_handler = logging.FileHandler(log_file)

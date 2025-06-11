@@ -32,9 +32,7 @@ class ContinuousScheduler:
         
         Args:
             strategy_function: The function to execute (should be the main strategy)
-            check_interval_minutes: How often to check market status (minutes)
-            run_at_market_open: Whether to execute immediately when market opens
-            max_runs_per_day: Maximum number of strategy executions per trading day
+            check_interval_minutes: How often to check market status (minutes)            run_at_market_open: Whether to execute immediately when market opens            max_runs_per_day: Maximum number of strategy executions per trading day
             discord_notifier: Optional Discord notifier for status updates
         """
         self.strategy_function = strategy_function
@@ -54,7 +52,6 @@ class ContinuousScheduler:
         # Set up signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-        
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}. Shutting down gracefully...")
@@ -95,12 +92,12 @@ class ContinuousScheduler:
                 not self.last_market_status.get('is_market_open', False) and 
                 current_status['is_market_open']):
                 return True, "Market just opened"
-          # For now, we'll execute once when market opens
+        
+        # For now, we'll execute once when market opens
         # This can be expanded with more sophisticated scheduling logic
         if self.runs_today == 0 and self.market_checker.is_market_open():
             return True, "First run of the trading day"
-        
-        return False, "No execution trigger met"
+            return False, "No execution trigger met"
     
     def _execute_strategy(self):
         """Execute the strategy function with error handling."""
@@ -213,14 +210,13 @@ class ContinuousScheduler:
                 time.sleep(60)  # Wait 1 minute before retrying
         
         self.stop()
+    
     def stop(self):
         """Stop the continuous scheduler."""
         logger.info("Stopping continuous scheduler...")
         self.is_running = False
         
-        # Only send shutdown notification once
-        if self.discord_notifier and not self.shutdown_notified:
-            self.shutdown_notified = True
+        if self.discord_notifier:
             self.discord_notifier.send_scheduler_notification(
                 "shutdown",
                 f"🛑 Options Wheel Bot stopped\n" +
